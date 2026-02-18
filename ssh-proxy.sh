@@ -1,14 +1,15 @@
-cat << 'EOF' > setup-proxy.sh
 #!/bin/bash
 
-# --- 1. INITIAL SETUP ---
+# --- 1. INITIAL SETUP (Questions) ---
 clear
 echo "=========================================="
 echo "      SSH PROXY PANEL INSTALLER          "
 echo "=========================================="
-read -p "Enter Foreign Server IP: " R_IP
-read -p "Enter Tunnel Port (Default 1081): " R_PORT
-R_PORT=${R_PORT:-1081}
+if [ "$1" != "init" ]; then
+    read -p "Enter Foreign Server IP: " R_IP
+    read -p "Enter Tunnel Port (Default 1081): " R_PORT
+    R_PORT=${R_PORT:-1081}
+fi
 
 # --- 2. CREATE THE MAIN SCRIPT ---
 cat << 'INNER_EOF' > /usr/local/bin/ssh-proxy
@@ -70,11 +71,22 @@ After=network.target
 User=root
 ExecStart=/usr/bin/ssh -N -D 0.0.0.0:${PORT} -o ServerAliveInterval=15 -o StrictHostKeyChecking=accept-new root@${IP}
 Restart=always
+[Install]
+WantedBy=multi-user.target
 S_FILE
 
     systemctl daemon-reload && systemctl enable ${SERVICE} && systemctl restart ${SERVICE}
     if ! grep -q "^${PORT}:" $CONFIG_FILE; then echo "${PORT}:${IP}" >> $CONFIG_FILE; fi
     echo "Done!"; sleep 1; [[ -z "$1" ]] && show_menu
+}
+
+list_tunnels() {
+    echo -e "\nPORT\tIP\tSTATUS"
+    while IFS=: read -r p ip; do
+        s=$(systemctl is-active ssh-proxy-${p})
+        echo -e "${p}\t${ip}\t${s}"
+    done < $CONFIG_FILE
+    read -p "Press Enter..."; show_menu
 }
 
 ping_test() {
@@ -95,7 +107,7 @@ speed_test() {
     eval "P=\$port_$IDX"
     if [[ -z "$P" ]]; then show_menu; fi
     curl -4 -L --socks5-hostname 127.0.0.1:${P} -o /dev/null --connect-timeout 10 http://cachefly.cachefly.net/10mb.test
-    read -p "Press Enter..."; show_menu
+    echo "Speed test finished."; read -p "Press Enter..."; show_menu
 }
 
 delete_tunnel() {
@@ -111,21 +123,12 @@ delete_tunnel() {
 }
 
 view_logs() {
-    echo -e "\nSelect Port Index:"
+    echo -e "\nSelect Port Index for logs:"
     list_indexed_ports
     read -p "Index: " IDX
     eval "P=\$port_$IDX"
     if [[ -z "$P" ]]; then show_menu; fi
     journalctl -u ssh-proxy-${P} -n 30
-    read -p "Press Enter..."; show_menu
-}
-
-list_tunnels() {
-    echo -e "\nPORT\tIP\tSTATUS"
-    while IFS=: read -r p ip; do
-        s=$(systemctl is-active ssh-proxy-${p})
-        echo -e "${p}\t${ip}\t${s}"
-    done < $CONFIG_FILE
     read -p "Press Enter..."; show_menu
 }
 
@@ -135,7 +138,7 @@ uninstall_panel() {
         rm -f /etc/systemd/system/ssh-proxy-${p}.service
     done < $CONFIG_FILE
     rm -f $CONFIG_FILE /usr/local/bin/ssh-proxy
-    echo "Uninstalled."; exit 0
+    echo "Uninstalled successfully."; exit 0
 }
 
 if [[ "$1" == "init" ]]; then create_tunnel $2 $3; else show_menu; fi
@@ -143,8 +146,7 @@ INNER_EOF
 
 # --- 3. FINALIZING ---
 chmod +x /usr/local/bin/ssh-proxy
-/usr/local/bin/ssh-proxy init $R_IP $R_PORT
+if [ "$1" != "init" ]; then
+    /usr/local/bin/ssh-proxy init $R_IP $R_PORT
+fi
 echo "Installation complete! Type 'ssh-proxy' to manage."
-EOF
-
-bash setup-proxy.sh
