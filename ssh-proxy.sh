@@ -1,15 +1,14 @@
+cat << 'EOF' > install.sh
 #!/bin/bash
 
-# --- 1. INITIAL SETUP (Questions) ---
+# --- 1. INITIAL SETUP ---
 clear
 echo "=========================================="
 echo "      SSH PROXY PANEL INSTALLER          "
 echo "=========================================="
-if [ "$1" != "init" ]; then
-    read -p "Enter Foreign Server IP: " R_IP
-    read -p "Enter Tunnel Port (Default 1081): " R_PORT
-    R_PORT=${R_PORT:-1081}
-fi
+read -p "Enter Foreign Server IP: " R_IP
+read -p "Enter Tunnel Port (Default 1081): " R_PORT
+R_PORT=${R_PORT:-1081}
 
 # --- 2. CREATE THE MAIN SCRIPT ---
 cat << 'INNER_EOF' > /usr/local/bin/ssh-proxy
@@ -138,7 +137,7 @@ uninstall_panel() {
         rm -f /etc/systemd/system/ssh-proxy-${p}.service
     done < $CONFIG_FILE
     rm -f $CONFIG_FILE /usr/local/bin/ssh-proxy
-    echo "Uninstalled successfully."; exit 0
+    echo "Uninstalled."; exit 0
 }
 
 if [[ "$1" == "init" ]]; then create_tunnel $2 $3; else show_menu; fi
@@ -146,7 +145,8 @@ INNER_EOF
 
 # --- 3. FINALIZING ---
 chmod +x /usr/local/bin/ssh-proxy
-if [ "$1" != "init" ]; then
-    /usr/local/bin/ssh-proxy init $R_IP $R_PORT
-fi
+/usr/local/bin/ssh-proxy init $R_IP $R_PORT
 echo "Installation complete! Type 'ssh-proxy' to manage."
+EOF
+
+bash install.sh
