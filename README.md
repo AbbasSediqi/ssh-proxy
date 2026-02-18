@@ -18,4 +18,4 @@
 برای نصب پنل و راه‌اندازی اولین تونل، کافیست دستور زیر را کپی کرده و در ترمینال سرور ایران خود اجرا کنید:
 
 ```bash
-bash <(curl -sSL [https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh](https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh))
+wget -O setup.sh https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh && bash setup.sh
