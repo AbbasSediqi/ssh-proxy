@@ -1,4 +1,3 @@
-cat << 'EOF' > install.sh
 #!/bin/bash
 
 # --- 1. INITIAL SETUP ---
@@ -6,9 +5,11 @@ clear
 echo "=========================================="
 echo "      SSH PROXY PANEL INSTALLER          "
 echo "=========================================="
-read -p "Enter Foreign Server IP: " R_IP
-read -p "Enter Tunnel Port (Default 1081): " R_PORT
-R_PORT=${R_PORT:-1081}
+if [ "$1" != "init" ]; then
+    read -p "Enter Foreign Server IP: " R_IP
+    read -p "Enter Tunnel Port (Default 1081): " R_PORT
+    R_PORT=${R_PORT:-1081}
+fi
 
 # --- 2. CREATE THE MAIN SCRIPT ---
 cat << 'INNER_EOF' > /usr/local/bin/ssh-proxy
@@ -61,7 +62,6 @@ create_tunnel() {
     SERVICE="ssh-proxy-${PORT}"
     if [ ! -f ~/.ssh/id_rsa ]; then ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa; fi
     ssh-copy-id -o StrictHostKeyChecking=no root@${IP}
-    
     cat <<S_FILE > /etc/systemd/system/${SERVICE}.service
 [Unit]
 Description=SSH Tunnel ${PORT}
@@ -73,7 +73,6 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 S_FILE
-
     systemctl daemon-reload && systemctl enable ${SERVICE} && systemctl restart ${SERVICE}
     if ! grep -q "^${PORT}:" $CONFIG_FILE; then echo "${PORT}:${IP}" >> $CONFIG_FILE; fi
     echo "Done!"; sleep 1; [[ -z "$1" ]] && show_menu
@@ -145,8 +144,7 @@ INNER_EOF
 
 # --- 3. FINALIZING ---
 chmod +x /usr/local/bin/ssh-proxy
-/usr/local/bin/ssh-proxy init $R_IP $R_PORT
+if [ "$1" != "init" ]; then
+    /usr/local/bin/ssh-proxy init $R_IP $R_PORT
+fi
 echo "Installation complete! Type 'ssh-proxy' to manage."
-EOF
-
-bash install.sh
