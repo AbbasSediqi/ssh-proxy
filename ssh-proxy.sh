@@ -32,7 +32,7 @@ show_menu() {
     echo "=========================================="
     echo "      SSH TUNNEL MANAGEMENT PANEL        "
     echo "=========================================="
-    echo "1) Create New Tunnel"
+    echo "1) Create New Tunnel (Local Only)"
     echo "2) List Active Tunnels & Status"
     echo "3) Stop & Delete a Tunnel"
     echo "4) Ping Test (Latency)"
@@ -62,20 +62,23 @@ create_tunnel() {
     SERVICE="ssh-proxy-${PORT}"
     if [ ! -f ~/.ssh/id_rsa ]; then ssh-keygen -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa; fi
     ssh-copy-id -o StrictHostKeyChecking=no root@${IP}
+    
+    # تغییر آدرس گوش دادن به 127.0.0.1 برای امنیت و استفاده داخلی
     cat <<S_FILE > /etc/systemd/system/${SERVICE}.service
 [Unit]
-Description=SSH Tunnel ${PORT}
+Description=SSH Tunnel ${PORT} (Internal Only)
 After=network.target
 [Service]
 User=root
-ExecStart=/usr/bin/ssh -N -D 0.0.0.0:${PORT} -o ServerAliveInterval=15 -o StrictHostKeyChecking=accept-new root@${IP}
+ExecStart=/usr/bin/ssh -N -D 127.0.0.1:${PORT} -o ServerAliveInterval=15 -o StrictHostKeyChecking=accept-new root@${IP}
 Restart=always
 [Install]
 WantedBy=multi-user.target
 S_FILE
+
     systemctl daemon-reload && systemctl enable ${SERVICE} && systemctl restart ${SERVICE}
     if ! grep -q "^${PORT}:" $CONFIG_FILE; then echo "${PORT}:${IP}" >> $CONFIG_FILE; fi
-    echo "Done!"; sleep 1; [[ -z "$1" ]] && show_menu
+    echo "Done! Port ${PORT} is now available for internal use."; sleep 2; [[ -z "$1" ]] && show_menu
 }
 
 list_tunnels() {
@@ -93,8 +96,8 @@ ping_test() {
     read -p "Index: " IDX
     eval "P=\$port_$IDX"
     if [[ -z "$P" ]]; then show_menu; fi
-    echo "Testing latency to 1.1.1.1..."
-    curl -4 -o /dev/null -s --connect-timeout 5 -w "Connect: %{time_connect}s | Total: %{time_total}s\n" --socks5-hostname 127.0.0.1:${P} http://1.1.1.1 || echo "Error: Offline"
+    echo "Testing internal latency to 1.1.1.1..."
+    curl -4 -o /dev/null -s --connect-timeout 5 -w "Connect: %{time_connect}s | Total: %{time_total}s\n" --socks5-hostname 127.0.0.1:${P} http://1.1.1.1 || echo "Error: Internal tunnel not responding."
     read -p "Press Enter..."; show_menu
 }
 
@@ -105,7 +108,7 @@ speed_test() {
     eval "P=\$port_$IDX"
     if [[ -z "$P" ]]; then show_menu; fi
     curl -4 -L --socks5-hostname 127.0.0.1:${P} -o /dev/null --connect-timeout 10 http://cachefly.cachefly.net/10mb.test
-    echo "Speed test finished."; read -p "Press Enter..."; show_menu
+    read -p "Press Enter..."; show_menu
 }
 
 delete_tunnel() {
