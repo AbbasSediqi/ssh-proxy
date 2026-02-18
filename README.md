@@ -18,4 +18,4 @@
 برای نصب، دستور زیر را در ترمینال کپی کنید:
 
 ```bash
-wget -qO- [https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh](https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh) | tr -d '\r' > setup.sh && bash setup.sh
+wget -qO- https://raw.githubusercontent.com/AbbasSediqi/ssh-proxy/main/ssh-proxy.sh | tr -d '\r' > setup.sh && bash setup.sh
